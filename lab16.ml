@@ -14,7 +14,7 @@ at `point.ml`. Why?) *)
 open Point ;;
 
 (*====================================================================
-Part 1 - Function-oriented vehicles 
+Part 1: Function-oriented vehicles 
 
 In this part, you will revisit algebraic data types to model some
 vehicles, implementing functionality in a function-oriented approach,
@@ -33,8 +33,8 @@ type vehicle =
 
 (*....................................................................
 Exercise 1: Define a function `get_efficiency` that takes a `vehicle`
-and returns its efficiency in miles per gallon (mpg). For purposes
-here, buses get 20. mpg, cars get 30. mpg, and trucks get
+and returns its efficiency in units of miles per gallon (mpg). For
+purposes here, buses get 20. mpg, cars get 30. mpg, and trucks get
 15. mpg. (Notice that these values are `float`s.)
 ....................................................................*)
    
@@ -54,7 +54,10 @@ let get_energy (veh : vehicle) : float =
   match veh with 
   | Bus (_, energy) 
   | Car (_, energy) 
-  | Truck (_, energy) -> energy ;; 
+  | Truck (_, energy) -> energy ;;
+
+(* Notice that by using the same variable name in each of the three
+   alternative patterns, we can share the body. *)
 
 (*....................................................................
 Exercise 3: Write a function `get_pos` that returns the x-y position
@@ -66,24 +69,34 @@ let get_pos (veh : vehicle) : point =
   | Bus (p, _)
   | Car (p, _)
   | Truck (p, _) -> p ;;
+
+(* No need to deconstruct the position itself. *)
      
 (*....................................................................
 Exercise 4: Let's define a function that allows these vehicles to
-travel somewhere. Write a `go` function that takes a vehicle and a
-distance (a `float`) and a direction (an angle in radians represented
-by a `float`), and updates the vehicle's position tuple to travel that
-distance in that direction, and reduces its energy accordingly.
+travel somewhere. Write a `go` function that takes a vehicle, a
+distance (a `float`), and a direction (an angle in radians represented
+by a `float`), and returns updated information about the vehicle --
+its new position after traveling that distance in that direction, and
+its energy reduced accordingly.
 
-(Fortunately, you don't need to know how to do the calculation of the
-change in position, since the `Point` module can handle it for you;
-see the `Point.offset` function.) 
+Some important points:
 
-Assume that the vehicle has a full tank, and that each vehicle can
-only go as far as its energy will carry it, so if the distance is
-farther than that, the vehicle will go only as far as its energy
-allows. Your function should return a new `vehicle` with the updated
-position and energy. (Calls with negative distance should raise an
-`Invalid_argument` exception.)
+   o Your function should return a new `vehicle` with the updated
+     position and energy. (Since the `point` and `vehicle` types are
+     not mutable, you can't update the information "in place".)
+
+   o Calling the function with a negative distance should raise an
+     `Invalid_argument` exception.
+
+   o Fortunately, you don't need to know how to do the calculation of
+     the change in position, since the `Point` module can handle it
+     for you; see the `Point.offset` function.
+
+   o Assume that the vehicle has a full tank, and that each vehicle
+     can only go as far as its energy will carry it, so if the
+     distance is farther than that, the vehicle will go as far as
+     its energy allows and stop with no remaining energy.
 ....................................................................*)
 
 let go (veh : vehicle) (distance : float) (angle : float) : vehicle =
@@ -100,6 +113,23 @@ let go (veh : vehicle) (distance : float) (angle : float) : vehicle =
     | Bus _ -> Bus (new_p, new_energy) 
     | Car _ -> Car (new_p, new_energy)
     | Truck _ -> Truck (new_p, new_energy) ;;
+   
+(* At this point, you should be able to model a vehicle's movement
+like this:
+
+      # open Lab16 ;;
+      # let mach5 = Car ((0., 0.), 5.) ;;   
+      val mach5 : Lab16.vehicle = Car ((0., 0.), 5.)
+      # get_pos mach5 ;;
+      - : Point.point = (0., 0.)
+      # let mach5 = go mach5 5. 0. ;;
+      val mach5 : Lab16.vehicle = Car ((5., 0.), 4.83333333333333304)
+      # let mach5 = go mach5 5. (Float.pi) ;;
+      val mach5 : Lab16.vehicle =
+        Car ((0., 6.12323399573676628e-16), 4.66666666666666607)
+      # get_pos mach5 ;;
+      - : Point.point = (0., 6.12323399573676628e-16)
+ *)
 
 (*====================================================================
 Part 2: Object-oriented vehicles
@@ -107,8 +137,8 @@ Part 2: Object-oriented vehicles
 Having implementing a few functions to be performed on vehicles
 defined as an algebraic data type, you might be getting weary of all
 these match statements you need to add. Consider what would happen if
-we added a new `vehicle` -- say, a `motorcycle` -- to the mix? We
-update the `vehicle` variant type definition to include motorcycles
+we added a new kind of `vehicle` -- say, a `motorcycle` -- to the mix?
+We update the `vehicle` variant type definition to include motorcycles
 simply enough, but suddenly we get a bunch of nonexhaustive match
 cases in all the functions we implemented matching on vehicles. This
 in itself is a source of motivation to pursue a better strategy. This
@@ -136,7 +166,7 @@ The `vehicle_class` class constructor takes several arguments:
 
   efficiency -- the vehicle's efficiency in mpg
 
-  initial_energy -- the vehicle's initial amount of energy  
+  initial_energy -- the vehicle's initial amount of energy
 
   initial_pos -- the initial position of the vehicle
 
@@ -201,6 +231,29 @@ class vehicle_class (capacity: float)
       energy <- capacity
   end ;; 
 
+(* At this point, you should be able to model a vehicle's movement
+like this:
+
+      # let mach5 = new vehicle_class 5. 30. 5. (0., 0.) ;;   
+      val mach5 : Lab16.vehicle_class = <obj>
+      # mach5#get_pos ;;
+      - : Point.point = (0., 0.)
+      # mach5#go 5. 0. ;;
+      - : unit = ()
+      # mach5#get_pos ;;
+      - : Point.point = (5., 0.)
+      # mach5#go 5. Float.pi ;;
+      - : unit = ()
+      # mach5#get_pos ;;
+      - : Point.point = (0., 6.12323399573676628e-16)
+      # mach5#get_energy ;;
+      - : float = 4.66666666666666607
+      # mach5#fill ;;
+      - : unit = ()
+      # mach5#get_energy ;;
+      - : float = 5.
+ *)
+  
 (*====================================================================
 Part 3 Inheritance
 
@@ -214,9 +267,9 @@ the `vehicle_class` definition by taking advantage of inheritance. Try
 this out for yourself below.
 
 ......................................................................
-Exercise 8: Define a `car` class, taking advantage of inheritance.
-Objects of the `car` class should have the energy efficiency and
-capacity as in this table:
+Exercise 8: Define a `car` class, taking advantage of inheritance by
+inheriting from the `vehicle_class` class.  Objects of the `car` class
+should have the energy efficiency and capacity as in this table:
 
            efficiency  capacity
     Car        30.        100.
@@ -246,17 +299,22 @@ additional functionality that makes a bus a bus.
 
 A bus should be able to pick up and drop off passengers. To implement
 this functionality, give your bus class additional instance variables:
-`seats` (the number of seats on the bus, which defines the maximum
-number of passengers it can accommodate) and `passengers` (the number
-of passengers currently on the bus). (You'll want to think about
-whether these fields should be mutable or not.) The class should allow
-for methods `pick_up` and `drop_off`, which both take the number of
-passengers to perform the action on and return a `unit`. Keep in mind
-you can't drop off more passengers than you currently have, so in this
-case you can just reset your passenger count to 0. A bus also offers
-finite seating (50 seats, in our case) and this rule should be
-enforced as well. So, if 70 people try to board the bus at the same
-time, only the first 50 will be able to.
+
+    `seats` -- the number of seats on the bus, which defines the
+       maximum number of passengers it can accommodate
+
+    `passengers` -- the number of passengers currently on the bus
+
+(You'll want to think about whether these fields should be mutable or
+not.) 
+
+The class should allow for methods `pick_up` and `drop_off`, which
+both take the number of passengers to perform the action on and return
+a `unit`. Keep in mind you can't drop off more passengers than you
+currently have, so in this case you can just reset your passenger
+count to 0. A bus also offers finite seating (50 seats, in our case)
+and this rule should be enforced as well. So, if 70 people try to
+board the bus at the same time, only the first 50 will be able to.
 
 Furthermore, when a bus goes in for a fill-up, it will behave as a
 vehicle, but first needs to drop off all its passengers. Override the
@@ -285,11 +343,19 @@ class bus (initial_energy : float) (initial_pos : point) (seats : int) =
       super#fill
   end ;;
 
-(* Note the overriding of the `fill` method. We've marked the method
-   with `method!` instead of just `method`. The extra `!` diacritic
-   tells OCaml that this method overrides an inherited method, so that
-   OCaml will generate a warning if there was no inherited method
-   being overridden. It's another example of the edict of intention,
-   allowing the compiler to help you find bugs. See
-   http://caml.inria.fr/pub/docs/manual-ocaml/extn.html#sec236 for
-   further information.  *)
+(* Notice in particular the overriding of the `fill` method.
+
+   o We've added dropping off passengers to the `fill` method as per
+     the spec.
+
+   o We can still make use of the more general `fill` method in the
+     super-class, invoking it with `super#fill`. No need to
+     reimplement that functionality.
+
+   o We've marked the method with `method!` instead of just
+     `method`. The extra `!` diacritic tells OCaml that this method
+     overrides an inherited method, so that OCaml will generate a
+     warning if there was no inherited method being overridden. It's
+     another example of the edict of intention, allowing the compiler
+     to help you find bugs.
+ *)
