@@ -181,7 +181,7 @@ class vehicle_class (capacity: float)
                     (efficiency : float)
                     (initial_energy : float)
                     (initial_pos : point) =
-  object
+object (this)
     val capacity = capacity
     val efficiency = efficiency
     val mutable energy = initial_energy
@@ -215,10 +215,23 @@ class vehicle_class (capacity: float)
       if distance < 0. then
         raise (Invalid_argument "go: can't move in reverse")
       else
-        let distance = min distance (energy *. efficiency) in
-        pos <- offset pos distance angle;
-        energy <- energy -. distance /. efficiency;
+        let distance = min distance (this#get_energy *. efficiency) in
+        pos <- offset this#get_pos distance angle;
+        energy <- this#get_energy -. distance /. efficiency;
         odometer <- odometer +. distance
+
+    (* A note on the implementation: The solution here invokes the
+       methods `this#get_energy` and `this#get_pos` rather than direct
+       access to the instance variables `energy` and `pos`. Given the
+       (current) definitions of the methods, the two are equivalent;
+       they give the same answers. But that doesn't mean there's no
+       reason to prefer one over the other. By using the methods (the
+       externally visible definition of the energy available) rather
+       than the instance variable (which is not externally visible),
+       the implementation of `go` is "future-proofed" against changes
+       in the implementation of the method. That is, the more abstract
+       method invocation approach is more *maintainable* than the
+       instance variable approach. *)
 
     (*................................................................
     Exercise 7: Since we'll eventually run out of energy, it would be
@@ -346,7 +359,9 @@ class bus (initial_energy : float) (initial_pos : point) (seats : int) =
 (* Notice in particular the overriding of the `fill` method.
 
    o We've added dropping off passengers to the `fill` method as per
-     the spec.
+     the spec, by using an invocation of the `this#drop_off`
+     method. (That's better than directly specifying `passengers <- 0`
+     for the reasons outlined in the note on exercise 6.)
 
    o We can still make use of the more general `fill` method in the
      super-class, invoking it with `super#fill`. No need to
